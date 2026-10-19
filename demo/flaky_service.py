@@ -57,4 +57,7 @@ if __name__ == "__main__":
     ap.add_argument("--port", type=int, default=8080)
     port = ap.parse_args().port
     print(f"flaky service on :{port}", flush=True)
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    try:
+        ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    except KeyboardInterrupt:
+        print("\nflaky service stopped")
