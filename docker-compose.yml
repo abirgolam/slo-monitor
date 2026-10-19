@@ -1,0 +1,26 @@
+# docker compose up --build
+#   flaky-api   http://localhost:8080   the service under test (inject chaos here)
+#   monitor     http://localhost:9105   /metrics, /status, /healthz
+#   prometheus  http://localhost:9090   scrapes the monitor and evaluates the alert rules
+services:
+  flaky-api:
+    build: .
+    entrypoint: ["python", "demo/flaky_service.py", "--port", "8080"]
+    command: []
+    ports: ["8080:8080"]
+
+  monitor:
+    build: .
+    volumes:
+      - ./deploy/config.docker.toml:/app/config.toml:ro
+    ports: ["9105:9105"]
+    depends_on: [flaky-api]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [monitor]

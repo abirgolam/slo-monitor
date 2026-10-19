@@ -1,0 +1,40 @@
+# Demo config: time is COMPRESSED so you can watch alerts fire and resolve in about a minute.
+# See config.production.example.toml for real-world windows (30-day period, 1h/5m page windows).
+
+[global]
+probe_interval_s = 1
+slo_period_s     = 600      # 10-minute "month" for the demo
+bucket_s         = 1
+min_samples      = 5
+listen_port      = 9105
+# webhook_url    = "https://hooks.slack.com/services/..."   # optional, Slack-compatible
+
+[[targets]]
+name    = "flaky-api"
+url     = "http://flaky-api:8080/"
+timeout_s = 1.0
+expected_status = [200]
+
+  [[targets.slos]]
+  name      = "availability"
+  kind      = "availability"
+  objective = 0.99
+
+  [[targets.slos]]
+  name         = "latency-300ms"
+  kind         = "latency"
+  objective    = 0.95
+  threshold_ms = 300
+
+# Multi-window, multi-burn-rate alerting (Google SRE Workbook, ch. 5), scaled down.
+[[alert_rules]]
+severity       = "page"
+long_window_s  = 60
+short_window_s = 10
+burn_rate      = 14.4
+
+[[alert_rules]]
+severity       = "ticket"
+long_window_s  = 300
+short_window_s = 30
+burn_rate      = 6

@@ -1,0 +1,48 @@
+# Production-shaped config: a 30-day SLO period with the recommended alert
+# windows from the Google SRE Workbook ("Alerting on SLOs", table 5-8).
+#
+#  severity | long window | short window | burn rate | budget consumed when it fires
+#  page     | 1h          | 5m           | 14.4      | 2%
+#  page     | 6h          | 30m          | 6         | 5%
+#  ticket   | 3d          | 6h           | 1         | 10%
+
+[global]
+probe_interval_s = 10
+slo_period_s     = 2592000    # 30 days
+bucket_s         = 60         # 43,200 buckets per target, so memory stays bounded
+min_samples      = 20
+listen_port      = 9105
+
+[[targets]]
+name = "checkout-api"
+url  = "https://example.internal/healthz"
+timeout_s = 2.0
+
+  [[targets.slos]]
+  name      = "availability"
+  kind      = "availability"
+  objective = 0.999
+
+  [[targets.slos]]
+  name         = "latency-500ms"
+  kind         = "latency"
+  objective    = 0.99
+  threshold_ms = 500
+
+[[alert_rules]]
+severity = "page"
+long_window_s = 3600
+short_window_s = 300
+burn_rate = 14.4
+
+[[alert_rules]]
+severity = "page"
+long_window_s = 21600
+short_window_s = 1800
+burn_rate = 6
+
+[[alert_rules]]
+severity = "ticket"
+long_window_s = 259200
+short_window_s = 21600
+burn_rate = 1

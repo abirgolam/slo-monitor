@@ -1,0 +1,42 @@
+groups:
+  - name: slo-burn-rate
+    rules:
+      - alert: SLOBurnRatePage
+        expr: slo_alert_firing{severity="page"} == 1
+        labels: { severity: page }
+        annotations:
+          summary: "{{ $labels.target }}/{{ $labels.slo }} is burning error budget fast"
+          runbook: "docs/RUNBOOK.md#sloburnrate-page"
+
+      - alert: SLOBurnRateTicket
+        expr: slo_alert_firing{severity="ticket"} == 1
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $labels.target }}/{{ $labels.slo }} is slowly burning error budget"
+          runbook: "docs/RUNBOOK.md#sloburnrate-ticket"
+
+      - alert: ErrorBudgetExhausted
+        expr: slo_error_budget_remaining_ratio < 0
+        for: 1m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $labels.target }}/{{ $labels.slo }} has spent its whole error budget"
+          runbook: "docs/RUNBOOK.md#errorbudgetexhausted"
+
+  # Who watches the watchmen? If the monitor dies, every SLO alert above goes silent.
+  - name: meta-monitoring
+    rules:
+      - alert: SLOMonitorDown
+        expr: up{job="slo-monitor"} == 0
+        for: 30s
+        labels: { severity: page }
+        annotations:
+          summary: "slo-monitor is not being scraped, so SLO alerting is blind"
+          runbook: "docs/RUNBOOK.md#slomonitordown"
+
+      - alert: SLOMonitorStale
+        expr: time() - slo_monitor_last_eval_timestamp_seconds > 60
+        labels: { severity: page }
+        annotations:
+          summary: "slo-monitor is up, but its evaluation loop is stuck"
+          runbook: "docs/RUNBOOK.md#slomonitordown"

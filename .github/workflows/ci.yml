@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Lint
+        run: pip install ruff && ruff check .
+      - name: Unit + integration tests
+        run: python -m unittest discover -s tests -t . -v
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t slo-monitor:ci .
+      - name: Smoke test (container starts and passes its health check)
+        run: |
+          docker run -d --name mon -p 9105:9105 slo-monitor:ci
+          for i in $(seq 1 15); do curl -fs localhost:9105/healthz && break; sleep 1; done
+          curl -fs localhost:9105/metrics | grep slo_monitor_last_eval_timestamp_seconds
+          docker rm -f mon
